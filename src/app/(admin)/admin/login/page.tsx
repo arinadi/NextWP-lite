@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -12,11 +12,7 @@ export default function LoginPage() {
         setIsLoading(true);
         setError("");
         try {
-            await authClient.signIn.social({
-                provider: "google",
-                callbackURL: "/admin",
-                errorCallbackURL: "/admin/login",
-            });
+            await signIn("google", { callbackUrl: "/admin" });
         } catch {
             setError("Failed to connect to Google. Please try again.");
             setIsLoading(false);
@@ -81,7 +77,7 @@ export default function LoginPage() {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-neutral-600 mt-6">
-                    Powered by Better Auth • Deployed on Vercel
+                    Powered by NextAuth.js • Deployed on Vercel
                 </p>
             </div>
         </div>

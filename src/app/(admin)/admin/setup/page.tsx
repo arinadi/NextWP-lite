@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { authClient } from "@/lib/auth-client";
+import { signIn } from "next-auth/react";
 import { Loader2, CheckCircle2, Database, Shield, Globe, AlertTriangle } from "lucide-react";
 
 type Step = "checking" | "setup" | "installing" | "login" | "done" | "already_installed";
@@ -56,11 +56,7 @@ export default function SetupPage() {
     };
 
     const handleGoogleSignIn = async () => {
-        await authClient.signIn.social({
-            provider: "google",
-            callbackURL: "/admin",
-            errorCallbackURL: "/admin/setup",
-        });
+        await signIn("google", { callbackUrl: "/admin" });
     };
 
     return (
@@ -136,7 +132,7 @@ export default function SetupPage() {
                             <div className="space-y-3 mb-6 p-4 bg-neutral-800/50 rounded-xl">
                                 <div className="flex items-center gap-3 text-sm">
                                     <Database size={16} className="text-blue-400 flex-shrink-0" />
-                                    <span className="text-neutral-300">Creates 6 database tables (users, posts, media, options...)</span>
+                                    <span className="text-neutral-300">Creates database tables</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm">
                                     <Shield size={16} className="text-green-400 flex-shrink-0" />
@@ -224,7 +220,7 @@ export default function SetupPage() {
                 </div>
 
                 <p className="text-center text-xs text-neutral-600 mt-6">
-                    Powered by Neon • Drizzle ORM • Better Auth
+                    Powered by Neon • Drizzle ORM • NextAuth.js
                 </p>
             </div>
         </div>

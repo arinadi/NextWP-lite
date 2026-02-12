@@ -2,46 +2,53 @@ import { pgTable, text, varchar, timestamp, boolean, uuid, jsonb, uniqueIndex, i
 import { relations } from "drizzle-orm";
 
 // --------------------------------------------------------------------------
-// 1. Users & Authentication (Better Auth Compatible)
+// 1. Users & Authentication (NextAuth v5 Compatible)
 // --------------------------------------------------------------------------
-// Better Auth uses text IDs by default for broad compatibility
 export const users = pgTable("user", {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name"),
     email: text("email").notNull().unique(),
-    emailVerified: boolean("email_verified").notNull(),
+    emailVerified: timestamp("emailVerified", { mode: "date" }),
     image: text("image"),
-    createdAt: timestamp("created_at").notNull(),
-    updatedAt: timestamp("updated_at").notNull(),
-    // Better Auth Admin plugin adds 'role' and 'banned' fields
+    // Custom fields
     role: text("role").$type<"super_admin" | "editor" | "author" | "user">().default("user"),
-    banned: boolean("banned"),
-    banReason: text("ban_reason"),
-    banExpires: timestamp("ban_expires"),
-});
-
-export const sessions = pgTable("session", {
-    id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at").notNull(),
-    token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at").notNull(),
-    updatedAt: timestamp("updated_at").notNull(),
-    ipAddress: text("ip_address"),
-    userAgent: text("user_agent"),
-    userId: text("user_id").notNull().references(() => users.id),
+    status: text("status").$type<"setup" | "invited" | "pending" | "active" | "suspended">().default("active"),
+    lastLoginAt: timestamp("last_login_at"),
 });
 
 export const accounts = pgTable("account", {
-    id: text("id").primaryKey(),
-    accountId: text("account_id").notNull(),
-    providerId: text("provider_id").notNull(),
-    userId: text("user_id").notNull().references(() => users.id),
-    accessToken: text("access_token"),
-    refreshToken: text("refresh_token"),
-    idToken: text("id_token"),
-    expiresAt: timestamp("expires_at"),
-    password: text("password"),
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+}, (account) => [
+    {
+        compoundKey: [account.provider, account.providerAccountId]
+    }
+]);
+
+export const sessions = pgTable("session", {
+    sessionToken: text("sessionToken").primaryKey(),
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
 });
+
+export const verificationTokens = pgTable("verificationToken", {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+}, (verificationToken) => [
+    {
+        compositePk: [verificationToken.identifier, verificationToken.token]
+    }
+]);
 
 // --------------------------------------------------------------------------
 // 2. Content Management (Posts & Pages)

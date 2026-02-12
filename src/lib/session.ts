@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
 /**
@@ -7,10 +6,7 @@ import { redirect } from "next/navigation";
  * Returns the session object or null if not authenticated.
  */
 export async function getSession() {
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    });
-    return session;
+    return await auth();
 }
 
 /**
@@ -19,7 +15,7 @@ export async function getSession() {
  */
 export async function requireAuth() {
     const session = await getSession();
-    if (!session) {
+    if (!session || !session.user) {
         redirect("/admin/login");
     }
     return session;
@@ -30,7 +26,8 @@ export async function requireAuth() {
  */
 export async function requireRole(roles: string[]) {
     const session = await requireAuth();
-    if (!roles.includes(session.user.role as string)) {
+    // @ts-ignore
+    if (session.user && !roles.includes(session.user.role as string)) {
         redirect("/admin");
     }
     return session;

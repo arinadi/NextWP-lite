@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
     Plus,
     Bold,
@@ -9,111 +9,138 @@ import {
     Heading,
     Link as LinkIcon,
     Image as ImageIcon,
+    Save,
+    Trash2,
+    Settings2,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Dynamic import for the editor to avoid SSR issues
+const Editor = dynamic(() => import("@/components/Editor"), { ssr: false });
 
 export default function EditorPage() {
+    const [title, setTitle] = useState("");
+    const [content, setContent] = useState<any[]>([]);
+
+    const handleSave = () => {
+        console.log("Saving post:", { title, content });
+        // TODO: Implement save logic
+    };
+
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full">
             {/* Header Actions */}
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-light text-gray-100">Edit Post</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-light tracking-tight">Edit Post</h1>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="gap-2">
+                        <Save className="size-4" />
+                        Save Draft
+                    </Button>
+                    <Button size="sm" onClick={handleSave} className="gap-2">
+                        Publish
+                    </Button>
+                </div>
             </div>
 
-            <div className="flex gap-6 h-full">
+            <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-12rem)]">
                 {/* Main Content Area */}
-                <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
-                    <input
+                <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+                    <Input
                         type="text"
-                        className="text-3xl font-bold bg-neutral-900 border-none px-4 py-3 placeholder-gray-600 text-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="text-5xl font-extrabold tracking-tight bg-transparent border-none px-6 lg:px-12 py-6 mb-8 placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:ring-offset-0 h-auto"
                         placeholder="Add title"
                     />
 
-                    {/* Editor Toolbar */}
-                    <div className="bg-neutral-800 border border-neutral-700 rounded-t-md p-2 flex gap-2 sticky top-0 z-10">
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><Plus size={18} /></button>
-                        <div className="w-px h-6 bg-neutral-700 mx-1" />
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><Bold size={18} /></button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><Italic size={18} /></button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><LinkIcon size={18} /></button>
-                        <div className="w-px h-6 bg-neutral-700 mx-1" />
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><Heading size={18} /></button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><List size={18} /></button>
-                        <button className="p-1.5 text-gray-400 hover:text-white hover:bg-neutral-700 rounded"><ImageIcon size={18} /></button>
-                    </div>
-
-                    {/* Editor Body */}
-                    <div className="bg-neutral-900 border border-neutral-700 border-t-0 rounded-b-md p-8 min-h-[500px] text-gray-300 font-serif text-lg leading-relaxed cursor-text">
-                        <p className="mb-4">
-                            Welcome to the new editing experience. Use{" "}
-                            <code className="bg-neutral-800 px-1 rounded text-sm text-blue-300">/</code>{" "}
-                            to trigger the command menu.
-                        </p>
-                        <p className="mb-4 text-gray-500 italic">
-                            Start writing or type &apos;/&apos; to choose a block
-                        </p>
-
-                        <div className="border border-blue-500/30 bg-blue-500/10 p-4 rounded my-6 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded bg-neutral-800 flex items-center justify-center text-gray-400">
-                                <ImageIcon size={16} />
-                            </div>
-                            <span className="text-gray-400 text-sm">Image block placeholder</span>
-                        </div>
+                    <div className="flex-1 bg-background border rounded-lg overflow-hidden shadow-sm flex flex-col">
+                        <ScrollArea className="flex-1 p-6 lg:p-12">
+                            <Editor
+                                initialContent={undefined}
+                                onChange={(blocks) => setContent(blocks)}
+                            />
+                        </ScrollArea>
                     </div>
                 </div>
 
                 {/* Sidebar Settings */}
-                <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+                <div className="w-full lg:w-80 flex-shrink-0 space-y-6 overflow-y-auto pb-8">
                     {/* Publish Panel */}
-                    <div className="bg-neutral-800 border border-neutral-700 rounded-sm">
-                        <div className="px-3 py-2 border-b border-neutral-700 font-medium text-sm text-gray-200">Publish</div>
-                        <div className="p-3 space-y-3 text-sm text-gray-400">
+                    <Card>
+                        <CardHeader className="py-3 px-4">
+                            <CardTitle className="text-sm font-medium">Publishing</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0 space-y-4 text-sm">
                             <div className="flex justify-between items-center">
-                                <span>Status:</span>
-                                <span className="font-bold text-gray-200">Draft</span>
+                                <span className="text-muted-foreground">Status:</span>
+                                <span className="font-semibold px-2 py-0.5 bg-muted rounded-full text-xs">Draft</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span>Visibility:</span>
-                                <span className="font-bold text-gray-200">Public</span>
+                                <span className="text-muted-foreground">Visibility:</span>
+                                <span className="font-semibold text-xs">Public</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span>Revisions:</span>
-                                <span className="font-bold text-gray-200">3</span>
+                            <Separator />
+                            <div className="flex justify-between items-center pt-1">
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 -ml-2">
+                                    <Trash2 className="size-4 mr-2" />
+                                    Move to Trash
+                                </Button>
                             </div>
-                        </div>
-                        <div className="px-3 py-2 border-t border-neutral-700 bg-neutral-800/50 flex justify-between items-center">
-                            <button className="text-red-400 text-sm hover:underline">Move to Trash</button>
-                            <button className="px-3 py-1.5 text-sm font-medium rounded border transition-colors bg-blue-600 border-blue-600 text-white hover:bg-blue-500">
-                                Publish
-                            </button>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
                     {/* Categories Panel */}
-                    <div className="bg-neutral-800 border border-neutral-700 rounded-sm">
-                        <div className="px-3 py-2 border-b border-neutral-700 font-medium text-sm text-gray-200">Categories</div>
-                        <div className="p-3 max-h-40 overflow-y-auto space-y-2">
-                            {["Uncategorized", "Technology", "Tutorial", "News", "Opinion"].map((cat) => (
-                                <label key={cat} className="flex items-center gap-2 text-sm text-gray-300 hover:text-white cursor-pointer">
-                                    <input type="checkbox" className="accent-blue-600 rounded bg-neutral-700 border-neutral-600" />
-                                    {cat}
-                                </label>
-                            ))}
-                        </div>
-                        <div className="px-3 py-2 border-t border-neutral-700">
-                            <button className="text-blue-400 text-sm underline flex items-center gap-1">+ Add New Category</button>
-                        </div>
-                    </div>
+                    <Card>
+                        <CardHeader className="py-3 px-4">
+                            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                {["Uncategorized", "Technology", "Tutorial", "News", "Opinion"].map((cat) => (
+                                    <label key={cat} className="flex items-center gap-2 text-sm text-foreground/80 hover:text-foreground cursor-pointer group">
+                                        <input type="checkbox" className="size-4 rounded border-input bg-background accent-primary" />
+                                        <span className="group-hover:translate-x-0.5 transition-transform">{cat}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <Button variant="link" size="sm" className="px-0 mt-3 text-primary h-auto">
+                                + Add New Category
+                            </Button>
+                        </CardContent>
+                    </Card>
 
                     {/* Featured Image */}
-                    <div className="bg-neutral-800 border border-neutral-700 rounded-sm">
-                        <div className="px-3 py-2 border-b border-neutral-700 font-medium text-sm text-gray-200">Featured Image</div>
-                        <div className="p-3">
-                            <div className="bg-neutral-900 border-2 border-dashed border-neutral-700 rounded h-32 flex flex-col items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-400 cursor-pointer transition-colors">
-                                <ImageIcon size={24} className="mb-2" />
+                    <Card>
+                        <CardHeader className="py-3 px-4">
+                            <CardTitle className="text-sm font-medium">Featured Image</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                            <div className="aspect-video bg-muted/50 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary cursor-pointer transition-all group">
+                                <ImageIcon size={24} className="mb-2 group-hover:scale-110 transition-transform" />
                                 <span className="text-xs">Set featured image</span>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0">
+                            <CardTitle className="text-sm font-medium">Post Options</CardTitle>
+                            <Settings2 className="size-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Plus className="size-4" />
+                                <span>Advanced configurations...</span>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

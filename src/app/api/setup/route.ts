@@ -18,53 +18,58 @@ export async function POST() {
 
         // Execute schema creation (all tables with IF NOT EXISTS)
         await sql`
-            -- 1. Users (Better Auth compatible)
+            -- 1. Users (NextAuth v5)
             CREATE TABLE IF NOT EXISTS "user" (
                 id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
+                name TEXT,
                 email TEXT NOT NULL UNIQUE,
-                email_verified BOOLEAN NOT NULL DEFAULT false,
+                "emailVerified" TIMESTAMP,
                 image TEXT,
-                created_at TIMESTAMP NOT NULL DEFAULT now(),
-                updated_at TIMESTAMP NOT NULL DEFAULT now(),
                 role TEXT DEFAULT 'user',
-                banned BOOLEAN,
-                ban_reason TEXT,
-                ban_expires TIMESTAMP
+                status TEXT DEFAULT 'active',
+                last_login_at TIMESTAMP
             );
         `;
 
         await sql`
-            -- 2. Sessions (Better Auth compatible)
-            CREATE TABLE IF NOT EXISTS "session" (
-                id TEXT PRIMARY KEY,
-                expires_at TIMESTAMP NOT NULL,
-                token TEXT NOT NULL UNIQUE,
-                created_at TIMESTAMP NOT NULL DEFAULT now(),
-                updated_at TIMESTAMP NOT NULL DEFAULT now(),
-                ip_address TEXT,
-                user_agent TEXT,
-                user_id TEXT NOT NULL REFERENCES "user"(id)
-            );
-        `;
-
-        await sql`
-            -- 3. Accounts (Better Auth compatible)
+            -- 2. Accounts (NextAuth v5)
             CREATE TABLE IF NOT EXISTS "account" (
-                id TEXT PRIMARY KEY,
-                account_id TEXT NOT NULL,
-                provider_id TEXT NOT NULL,
-                user_id TEXT NOT NULL REFERENCES "user"(id),
-                access_token TEXT,
+                "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+                type TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                "providerAccountId" TEXT NOT NULL,
                 refresh_token TEXT,
+                access_token TEXT,
+                expires_at INTEGER,
+                token_type TEXT,
+                scope TEXT,
                 id_token TEXT,
-                expires_at TIMESTAMP,
-                password TEXT
+                session_state TEXT,
+                PRIMARY KEY (provider, "providerAccountId")
             );
         `;
 
         await sql`
-            -- 4. Posts
+            -- 3. Sessions (NextAuth v5)
+            CREATE TABLE IF NOT EXISTS "session" (
+                "sessionToken" TEXT PRIMARY KEY,
+                "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+                expires TIMESTAMP NOT NULL
+            );
+        `;
+
+        await sql`
+            -- 4. VerificationTokens (NextAuth v5)
+            CREATE TABLE IF NOT EXISTS "verificationToken" (
+                identifier TEXT NOT NULL,
+                token TEXT NOT NULL,
+                expires TIMESTAMP NOT NULL,
+                PRIMARY KEY (identifier, token)
+            );
+        `;
+
+        await sql`
+            -- 5. Posts (Updated reference)
             CREATE TABLE IF NOT EXISTS "posts" (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 slug VARCHAR(255) NOT NULL UNIQUE,
@@ -86,7 +91,7 @@ export async function POST() {
         `;
 
         await sql`
-            -- 5. Media
+            -- 6. Media
             CREATE TABLE IF NOT EXISTS "media" (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 url VARCHAR NOT NULL,
@@ -102,7 +107,7 @@ export async function POST() {
         `;
 
         await sql`
-            -- 6. Options (Key-Value config)
+            -- 7. Options (Key-Value config)
             CREATE TABLE IF NOT EXISTS "options" (
                 key VARCHAR PRIMARY KEY,
                 value JSONB,
@@ -112,8 +117,8 @@ export async function POST() {
 
         // Mark as installed
         await sql`
-            INSERT INTO "options" (key, value, is_public)
-            VALUES ('installed', 'true'::jsonb, false)
+            INSERT INTO "options" (key, value)
+            VALUES ('installed', 'true'::jsonb)
             ON CONFLICT (key) DO NOTHING;
         `;
 
@@ -140,14 +145,14 @@ export async function GET() {
 
         // Check if options table exists and has 'installed' key
         const result = await sql`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'options'
-            ) as table_exists;
+            SELECT (
+                SELECT COUNT(*) FROM information_schema.tables 
+                WHERE table_name IN ('options', 'verificationToken')
+            ) as table_count;
         `;
 
-        if (!result[0]?.table_exists) {
-            return NextResponse.json({ installed: false, reason: "no_tables" });
+        if (Number(result[0]?.table_count) < 2) {
+            return NextResponse.json({ installed: false, reason: "missing_tables" });
         }
 
         const installed = await sql`
