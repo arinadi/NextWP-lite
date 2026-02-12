@@ -6,8 +6,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { db } from "@/db";
-import { users } from "@/db/schema";
+import { getDb } from "@/db";
+import { sql } from "drizzle-orm";
 import AdminShell from "./AdminShell";
 
 export default async function AdminLayout({
@@ -18,8 +18,6 @@ export default async function AdminLayout({
     const headerList = await headers();
     const pathname = headerList.get("x-invoke-path") || headerList.get("x-middleware-invoke-path") || "";
 
-    console.log("AdminLayout Pathname Debug:", { pathname, headers: Array.from(headerList.entries()) });
-
     const isLoginPage = pathname === "/admin/login";
     const isSetupPage = pathname === "/admin/setup";
     const isAuthFreePage = isLoginPage || isSetupPage;
@@ -28,14 +26,30 @@ export default async function AdminLayout({
         return <>{children}</>;
     }
 
+    // Safe DB check: verify the "user" table exists and has rows.
+    // Uses information_schema so it never fails even if tables are missing.
     try {
-        const userCount = await db.$count(users);
+        const db = getDb();
+        const result = await db.execute(
+            sql`SELECT EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name = 'user'
+            ) AS table_exists`
+        );
+        const tableExists = result.rows?.[0]?.table_exists === true;
+
+        if (!tableExists) {
+            redirect("/admin/setup");
+        }
+
+        // Table exists — check if it has any users
+        const countResult = await db.execute(sql`SELECT count(*)::int AS cnt FROM "user"`);
+        const userCount = countResult.rows?.[0]?.cnt ?? 0;
         if (userCount === 0) {
             redirect("/admin/setup");
         }
-    } catch (e) {
-        console.error("DB Error in layout:", e);
-        // If DB is not reachable or tables missing, go to setup
+    } catch {
+        // DB unreachable or any unexpected error → go to setup
         redirect("/admin/setup");
     }
 

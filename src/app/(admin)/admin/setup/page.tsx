@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2, CheckCircle2, Database, Shield, Globe, AlertTriangle } from "lucide-react";
 
-type Step = "checking" | "setup" | "installing" | "login" | "done" | "already_installed";
+type Step = "checking" | "setup" | "installing" | "login" | "done" | "already_installed" | "db_error";
 
 export default function SetupPage() {
     const [step, setStep] = useState<Step>("checking");
@@ -12,12 +12,16 @@ export default function SetupPage() {
     const [siteTitle, setSiteTitle] = useState("My NextWP Site");
     const [siteTagline, setSiteTagline] = useState("Just another NextWP-lite site");
 
-    // Check if already installed
     useEffect(() => {
         async function checkInstall() {
             try {
                 const res = await fetch("/api/setup");
                 const data = await res.json();
+                if (data.reason === "db_error") {
+                    setStep("db_error");
+                    setError(data.message || "Could not connect to database.");
+                    return;
+                }
                 if (data.installed) {
                     setStep("already_installed");
                 } else {
@@ -36,10 +40,22 @@ export default function SetupPage() {
 
         try {
             // 1. Deploy database schema
-            const res = await fetch("/api/setup", { method: "POST" });
+            const res = await fetch("/api/setup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ siteTitle, siteTagline })
+            });
             const data = await res.json();
 
             if (!res.ok) {
+                // Check if it's a connection error
+                if (data.error?.toLowerCase().includes("failed to fetch") ||
+                    data.error?.toLowerCase().includes("connection") ||
+                    data.error?.toLowerCase().includes("database_url")) {
+                    setStep("db_error");
+                } else {
+                    setStep("setup");
+                }
                 throw new Error(data.error || "Failed to deploy schema");
             }
 
@@ -51,7 +67,7 @@ export default function SetupPage() {
             setStep("login");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Installation failed");
-            setStep("setup");
+            if (step !== "db_error") setStep("setup");
         }
     };
 
@@ -82,6 +98,36 @@ export default function SetupPage() {
                         <div className="text-center py-8">
                             <Loader2 size={32} className="animate-spin text-blue-500 mx-auto mb-4" />
                             <p className="text-neutral-400">Checking installation status...</p>
+                        </div>
+                    )}
+
+                    {/* DB Error state */}
+                    {step === "db_error" && (
+                        <div className="text-center py-4">
+                            <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                                <Database size={32} className="text-red-500" />
+                            </div>
+                            <h2 className="text-xl font-semibold text-white mb-2">Database Connection Error</h2>
+                            <div className="mb-6 p-4 bg-red-900/10 border border-red-800/30 rounded-xl text-left">
+                                <p className="text-red-300 text-sm font-mono break-all mb-3">
+                                    {error}
+                                </p>
+                                <div className="space-y-2 text-xs text-neutral-400">
+                                    <p className="font-bold text-neutral-300">Troubleshooting:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li>Check if <span className="text-blue-400">DATABASE_URL</span> is correctly set in your environment.</li>
+                                        <li>Ensure your database (Neon/Postgres) is active and reachable.</li>
+                                        <li>Check your internet connection if using a remote database.</li>
+                                        <li>If you just changed environment variables, restart the server.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                            >
+                                Try Again
+                            </button>
                         </div>
                     )}
 

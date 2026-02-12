@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
  * POST /api/setup — Deploy database schema (like WordPress install)
  * Only works if tables don't exist yet (idempotent via IF NOT EXISTS)
  */
-export async function POST() {
+export async function POST(request: Request) {
     try {
         if (!process.env.DATABASE_URL) {
             return NextResponse.json(
@@ -69,16 +69,29 @@ export async function POST() {
         `;
 
         await sql`
-            -- 5. Posts (Updated reference)
+            -- 5. Categories
+            CREATE TABLE IF NOT EXISTS "categories" (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) NOT NULL UNIQUE,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT now()
+            );
+        `;
+
+        await sql`
+            -- 6. Posts
             CREATE TABLE IF NOT EXISTS "posts" (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 slug VARCHAR(255) NOT NULL UNIQUE,
                 title VARCHAR(255) NOT NULL,
                 content JSONB NOT NULL,
                 excerpt TEXT,
+                type TEXT DEFAULT 'post',
                 status TEXT DEFAULT 'draft',
                 featured_image VARCHAR,
                 allow_comments BOOLEAN DEFAULT true,
+                category_id UUID REFERENCES "categories"(id),
                 author_id TEXT NOT NULL REFERENCES "user"(id),
                 created_at TIMESTAMP DEFAULT now(),
                 updated_at TIMESTAMP DEFAULT now(),
@@ -91,7 +104,7 @@ export async function POST() {
         `;
 
         await sql`
-            -- 6. Media
+            -- 7. Media
             CREATE TABLE IF NOT EXISTS "media" (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 url VARCHAR NOT NULL,
@@ -107,7 +120,7 @@ export async function POST() {
         `;
 
         await sql`
-            -- 7. Options (Key-Value config)
+            -- 8. Options (Key-Value config)
             CREATE TABLE IF NOT EXISTS "options" (
                 key VARCHAR PRIMARY KEY,
                 value JSONB,
@@ -121,6 +134,48 @@ export async function POST() {
             VALUES ('installed', 'true'::jsonb)
             ON CONFLICT (key) DO NOTHING;
         `;
+
+        // ----------------------------------------------------------------------
+        // Seed Initial Data (if not already seeded)
+        // ----------------------------------------------------------------------
+
+        // Check if already seeded
+        const seededCheck = await sql`SELECT value FROM "options" WHERE key = 'seeded'`;
+        if (seededCheck.length === 0) {
+
+            // 1. Default Settings
+            const body = await request.json().catch(() => ({}));
+            const finalTitle = body.siteTitle || "NextWP-lite";
+            const finalTagline = body.siteTagline || "Modern Serverless CMS";
+
+            await sql`
+                INSERT INTO "options" (key, value) VALUES
+                ('site_title', ${JSON.stringify(finalTitle)}::jsonb),
+                ('site_tagline', ${JSON.stringify(finalTagline)}::jsonb),
+                ('reading_settings', '{"showOnFront": "posts"}'::jsonb),
+                ('discussion_settings', '{"allowComments": true, "provider": "giscus"}'::jsonb),
+                ('installed', 'true'::jsonb)
+                ON CONFLICT (key) DO NOTHING;
+            `;
+
+            // 2. Default Menus
+            const validMenus = {
+                primary: [
+                    { id: "home", label: "Home", url: "/", type: "custom", showIcon: true, showText: true, icon: "home" },
+                    { id: "about", label: "About", url: "/about", type: "page", showIcon: true, showText: true, icon: "user" },
+                    { id: "contact", label: "Contact", url: "/contact", type: "page", showIcon: true, showText: true, icon: "mail" },
+                ],
+                footer: [
+                    { id: "privacy", label: "Privacy Policy", url: "/privacy", type: "custom", showIcon: false, showText: true },
+                ]
+            };
+
+            await sql`
+                INSERT INTO "options" (key, value)
+                VALUES ('site_menus', ${JSON.stringify(validMenus)}::jsonb)
+                ON CONFLICT (key) DO NOTHING;
+            `;
+        }
 
         return NextResponse.json({ success: true, message: "Database schema deployed successfully!" });
     } catch (error) {

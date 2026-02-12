@@ -87,18 +87,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     events: {
         async createUser({ user }) {
-            // "First-User" pattern: first account → Super Admin
-            const userCount = await db.$count(users);
-            // Verify if this is truly the first user (count might includes this one now?)
-            // db.$count might be slow or consistent read.
-            // simpler: fetch all users limit 2.
-            // If count is 1 (the one just created), promote.
+            try {
+                const { getOption } = await import("@/lib/options");
+                const { runSeed } = await import("@/lib/seed");
 
-            if (userCount <= 1) {
-                await db.update(users)
-                    .set({ role: "super_admin" })
-                    .where(eq(users.id, user.id!));
-                console.log(`🚀 System Init: ${user.email} promoted to Super Admin.`);
+                const userCount = await db.$count(users);
+
+                if (userCount <= 1) {
+                    // 1. Promote to Super Admin
+                    await db.update(users)
+                        .set({ role: "super_admin" })
+                        .where(eq(users.id, user.id!));
+
+                    console.log(`🚀 System Init: ${user.email} promoted to Super Admin.`);
+
+                    // 2. Trigger Seeding if not already done
+                    const isSeeded = await getOption('seeded');
+                    if (!isSeeded) {
+                        console.log(`🌱 Seeding demo content for ${user.email}...`);
+                        await runSeed(user.id!);
+                    }
+                }
+            } catch (error) {
+                console.error("Error in createUser event:", error);
             }
         }
     }

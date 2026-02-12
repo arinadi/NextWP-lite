@@ -164,6 +164,14 @@ Themes live in `src/themes/` and follow a registry pattern. See [THEME.md](.agen
 | `AUTH_URL` | Yes (Dev) | Auth URL (e.g. http://localhost:3000) |
 | `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob Token (for media) |
 
+## TODO
+- fix frontend layout.
+- fix post search
+- fix frontend search
+- related posts can choose and search (modal)
+- user list, user must not allowed to suspend and promote/depromote him self. even super admin. super admin can only delete user.
+- penetration test with AI.
+
 ## License
 
 MIT

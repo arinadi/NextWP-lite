@@ -132,7 +132,7 @@ function SidebarNav({ pathname, expandedMenus, toggleSubmenu }: any) {
             >
                 <SubmenuItem label="All Posts" href="/admin/posts" active={pathname === "/admin/posts"} />
                 <SubmenuItem label="Add New" href="/admin/posts/editor" active={pathname === "/admin/posts/editor"} />
-                <SubmenuItem label="Categories" href="/admin/posts" />
+                <SubmenuItem label="Categories" href="/admin/categories" active={pathname === "/admin/categories"} />
             </SidebarItem>
 
             <SidebarItem
@@ -142,7 +142,7 @@ function SidebarNav({ pathname, expandedMenus, toggleSubmenu }: any) {
                 isActive={pathname === "/admin/media"}
             />
 
-            <SidebarItem icon={FileText} label="Pages" href="/admin" />
+            <SidebarItem icon={FileText} label="Pages" href="/admin/pages" isActive={pathname === "/admin/pages"} />
 
             <div className="my-2 h-px bg-border" />
 
@@ -154,24 +154,18 @@ function SidebarNav({ pathname, expandedMenus, toggleSubmenu }: any) {
                 isOpen={expandedMenus["appearance"]}
                 onToggle={() => toggleSubmenu("appearance")}
             >
-                <SubmenuItem label="Themes" href="/admin" />
+                <SubmenuItem label="Themes" href="/admin/themes" active={pathname === "/admin/themes"} />
                 <SubmenuItem label="Menus" href="/admin/menus" active={pathname === "/admin/menus"} />
             </SidebarItem>
 
-            <SidebarItem icon={Users} label="Users" href="/admin" />
+            <SidebarItem icon={Users} label="Users" href="/admin/users" isActive={pathname === "/admin/users"} />
 
             <SidebarItem
                 icon={Settings}
                 label="Settings"
+                href="/admin/settings"
                 isActive={pathname === "/admin/settings"}
-                hasSubmenu
-                isOpen={expandedMenus["settings"]}
-                onToggle={() => toggleSubmenu("settings")}
-            >
-                <SubmenuItem label="General" href="/admin/settings" active={pathname === "/admin/settings"} />
-                <SubmenuItem label="Reading" href="/admin/settings" />
-                <SubmenuItem label="Discussion" href="/admin/settings" />
-            </SidebarItem>
+            />
         </div>
     );
 }
@@ -264,7 +258,7 @@ export default function AdminShell({
                             <DropdownMenuLabel>My Account</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
-                                <Link href="/admin/settings" className="cursor-pointer">
+                                <Link href="/admin/profile" className="cursor-pointer">
                                     <User className="mr-2 size-4" />
                                     <span>Profile</span>
                                 </Link>

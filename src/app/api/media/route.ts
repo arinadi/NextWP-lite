@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getDb } from "@/db";
 import { media } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export const runtime = "edge";
 
@@ -38,6 +38,33 @@ export async function GET(req: Request) {
 
     } catch (error: any) {
         console.error("Fetch media error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+        if (!id) {
+            return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
+        }
+
+        const db = getDb();
+        const [record] = await db.delete(media).where(eq(media.id, id)).returning();
+
+        if (!record) {
+            return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error("Delete media error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -53,6 +53,17 @@ export const verificationTokens = pgTable("verificationToken", {
 // --------------------------------------------------------------------------
 // 2. Content Management (Posts & Pages)
 // --------------------------------------------------------------------------
+// --------------------------------------------------------------------------
+// 2.5. Categories
+// --------------------------------------------------------------------------
+export const categories = pgTable("categories", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).unique().notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const posts = pgTable("posts", {
     id: uuid("id").primaryKey().defaultRandom(),
     slug: varchar("slug", { length: 255 }).unique().notNull(),
@@ -60,10 +71,12 @@ export const posts = pgTable("posts", {
     // Content stored as JSONB to preserve BlockNote structure (blocks, props)
     content: jsonb("content").notNull(),
     excerpt: text("excerpt"),
-    status: text("status").$type<"published" | "draft" | "private">().default("draft"),
+    type: text("type").$type<"post" | "page">().default("post"),
+    status: text("status").$type<"published" | "draft" | "trash" | "private">().default("draft"),
     featuredImage: varchar("featured_image"), // URL reference
     allowComments: boolean("allow_comments").default(true),
-    authorId: text("author_id").references(() => users.id).notNull(),
+    categoryId: uuid("category_id").references(() => categories.id),
+    authorId: text("author_id").references(() => users.id),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     publishedAt: timestamp("published_at"),
@@ -111,6 +124,14 @@ export const postsRelations = relations(posts, ({ one }) => ({
         fields: [posts.authorId],
         references: [users.id],
     }),
+    category: one(categories, {
+        fields: [posts.categoryId],
+        references: [categories.id],
+    }),
+}));
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+    posts: many(posts),
 }));
 
 export const mediaRelations = relations(media, ({ one }) => ({
