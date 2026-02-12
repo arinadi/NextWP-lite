@@ -13,8 +13,9 @@ A lightweight, full-stack CMS with a **"Dual-Realm" architecture**: Admin UI run
 | **Styling** | Tailwind CSS v4 |
 | **Database** | Neon (Serverless PostgreSQL) |
 | **ORM** | Drizzle ORM |
-| **Auth** | Better Auth (Google OAuth) |
-| **Media** | Vercel Blob (planned) |
+| **Auth** | NextAuth.js v5 (Beta) |
+| **Editor** | BlockNote (Notion-style) |
+| **Media** | Vercel Blob + Local Uploads |
 | **Icons** | Lucide React |
 | **Deployment** | Vercel Serverless |
 
@@ -37,17 +38,19 @@ src/
 │   │   ├── page.tsx         # Homepage
 │   │   └── [...slug]/       # Dynamic post/page routes
 │   ├── api/
-│   │   ├── auth/[...all]/   # Better Auth handler (OAuth callbacks)
+│   │   ├── auth/[...nextauth]/ # NextAuth.js handler
+│   │   ├── media/           # Media API (GET/POST)
 │   │   └── setup/           # DB schema deploy endpoint
 │   ├── globals.css
 │   └── layout.tsx           # Root layout
 ├── db/
-│   ├── schema.ts            # Drizzle ORM schema (6 tables)
-│   └── index.ts             # Neon serverless connection (lazy-init)
+│   ├── schema.ts            # Drizzle ORM schema (Media, Posts, Users)
+│   └── index.ts             # Neon serverless connection
 ├── lib/
-│   ├── auth.ts              # Better Auth server config
-│   ├── auth-client.ts       # Better Auth client instance
-│   └── session.ts           # Server-side session helpers (RBAC)
+│   ├── utils.ts             # CN utility
+│   └── session.ts           # Session helpers
+├── auth.ts                  # NextAuth.js config
+├── middleware.ts            # Auth middleware
 ├── themes/
 │   └── default/             # Default theme
 │       ├── components/      # Header, Footer, Sidebar
@@ -62,8 +65,8 @@ src/
 | Table | Description |
 |---|---|
 | `user` | Users with roles (super_admin, editor, author, user) |
-| `session` | Auth sessions (Better Auth) |
-| `account` | OAuth accounts — Google (Better Auth) |
+| `session` | Auth sessions (NextAuth.js) |
+| `account` | OAuth accounts — Google (NextAuth.js) |
 | `posts` | Content with JSONB body, UUID IDs, status, slug |
 | `media` | Hybrid media (local uploads + external hotlinks) |
 | `options` | Key-value site configuration |
@@ -94,9 +97,11 @@ Fill in your `.env.local`:
 
 ```env
 DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/dbname?sslmode=require
-BETTER_AUTH_SECRET=your-random-secret-key
-GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
+AUTH_SECRET=your-random-secret-key
+AUTH_GOOGLE_ID=xxxxx.apps.googleusercontent.com
+AUTH_GOOGLE_SECRET=GOCSPX-xxxxx
+AUTH_URL=http://localhost:3000
+AUTH_TRUST_HOST=true
 ```
 
 > **Google OAuth Redirect URI** — add in Google Cloud Console:
@@ -153,9 +158,11 @@ Themes live in `src/themes/` and follow a registry pattern. See [THEME.md](.agen
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | Neon PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | Yes | Auth encryption secret |
-| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
+| `AUTH_SECRET` | Yes | NextAuth.js secret key |
+| `AUTH_GOOGLE_ID` | Yes | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Yes | Google OAuth client secret |
+| `AUTH_URL` | Yes (Dev) | Auth URL (e.g. http://localhost:3000) |
+| `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob Token (for media) |
 
 ## License
 

@@ -1,19 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import defaultTheme from "@/themes/default";
-import { SITE_SETTINGS } from "@/lib/site-settings";
+import type { SiteSettings } from "@/types/theme";
 
-// For now, we statically import the default theme.
-// When multiple themes are registered, this can be extended
-// with a theme context or a dynamic mapping approach.
-const theme = defaultTheme;
-
-export default function PublicLayout({
-    children,
-}: {
+interface ThemeWrapperProps {
     children: React.ReactNode;
-}) {
+    header: React.ComponentType<any>;
+    footer: React.ComponentType<any>;
+    settings: SiteSettings;
+}
+
+export default function ThemeWrapper({
+    children,
+    header: Header,
+    footer: Footer,
+    settings,
+}: ThemeWrapperProps) {
     const [isDarkMode, setIsDarkMode] = useState(false);
 
     useEffect(() => {
@@ -24,18 +26,15 @@ export default function PublicLayout({
         }
     }, [isDarkMode]);
 
-    const Header = theme.components.Header;
-    const Footer = theme.components.Footer;
-
     return (
         <div className={`font-sans antialiased text-gray-900 dark:text-white`}>
             <Header
-                settings={SITE_SETTINGS}
+                settings={settings}
                 isDarkMode={isDarkMode}
                 toggleTheme={() => setIsDarkMode(!isDarkMode)}
             />
             {children}
-            <Footer settings={SITE_SETTINGS} />
+            <Footer settings={settings} />
         </div>
     );
 }
