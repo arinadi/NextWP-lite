@@ -14,6 +14,7 @@
     "@blocknote/mantine": "^0.46.2",
     "@blocknote/react": "^0.46.2",
     "@neondatabase/serverless": "^1.0.2",
+    "@serwist/next": "^9.5.5",
     "@vercel/blob": "^2.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -25,6 +26,7 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "serwist": "^9.5.5",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"
   },
